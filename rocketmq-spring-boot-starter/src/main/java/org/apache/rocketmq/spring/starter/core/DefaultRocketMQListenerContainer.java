@@ -17,21 +17,15 @@
 
 package org.apache.rocketmq.spring.starter.core;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.rocketmq.spring.starter.enums.ConsumeMode;
-import org.apache.rocketmq.spring.starter.enums.SelectorType;
-import org.apache.rocketmq.spring.starter.msgvo.ConsumeFailedMsgVO;
-import org.apache.rocketmq.spring.starter.utils.IPUtil;
-
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.MessageSelector;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
@@ -43,9 +37,19 @@ import org.apache.rocketmq.client.consumer.listener.MessageListenerOrderly;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
+import org.apache.rocketmq.spring.starter.enums.ConsumeMode;
+import org.apache.rocketmq.spring.starter.enums.SelectorType;
+import org.apache.rocketmq.spring.starter.exception.ConvertMsgException;
+import org.apache.rocketmq.spring.starter.msgvo.ConsumeFailedMsgVO;
+import org.apache.rocketmq.spring.starter.utils.IPUtil;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.util.Assert;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("WeakerAccess")
 @Slf4j
@@ -163,8 +167,17 @@ public class DefaultRocketMQListenerContainer implements InitializingBean, Rocke
                 } catch (Exception e) {
                     log.warn("consume message failed. messageExt:{}", messageExt, e);
                     context.setDelayLevelWhenNextConsume(delayLevelWhenNextConsume);
-                    //消息消费失败，发送失败消息
-                    this.sendConsumeMsgFailed(messageExt,e,consumeBeginTime);
+                    if(messageExt.getTopic().equals("DATA_COLLECTION_TOPIC") && "ConsumeMsgFailed".equals(messageExt.getTags())){
+    					log.error("消费失败的消息为“保存消费失败日志消息”，不需要记录日志,不需要重新消费，直接返回成功");
+    					return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+    				}
+                    if(e instanceof ConvertMsgException){
+                    	log.error("消费失败的原因为转换对象失败，需要记录日志，不需要重新消费，返回消费成功");
+                    	//消息消费失败，发送失败消息
+                    	this.sendConsumeMsgFailed(messageExt,e,consumeBeginTime);
+                    	return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+                    }
+                	this.sendConsumeMsgFailed(messageExt,e,consumeBeginTime);
                     return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                 }
             }
@@ -182,22 +195,26 @@ public class DefaultRocketMQListenerContainer implements InitializingBean, Rocke
 			String topic = "DATA_COLLECTION_TOPIC";
 			String tag  = "ConsumeMsgFailed";
 			try{
-				if(messageExt.getTopic().equals(topic) && tag.equals(messageExt.getTags())){
-					log.info("消费失败的消息为ConsumeMsgFailed，不需要记录日志");
-					return;
-				}
+				Date consumeEndTime = new Date();
 				String destination = topic+":"+tag;
 				ConsumeFailedMsgVO consumeFailedMsgVO = new ConsumeFailedMsgVO();
 				consumeFailedMsgVO.setConsumeBeginTime(consumeBeginTime);
-				Date consumeEndTime = new Date();
 				consumeFailedMsgVO.setConsumeEndTime(consumeEndTime);
 				consumeFailedMsgVO.setConsumeGroup(consumerGroup);
 				consumeFailedMsgVO.setConsumeIp(IPUtil.getLocalHost());
-				consumeFailedMsgVO.setConsumeConcurrentlyStatus(ConsumeConcurrentlyStatus.RECONSUME_LATER);
-				consumeFailedMsgVO.setE(e);
-				consumeFailedMsgVO.setExecuteTime((consumeEndTime.getTime()-consumeBeginTime.getTime())/1000);
-				consumeFailedMsgVO.setMessageExt(messageExt);
+				if(e!=null){
+					String errMsg = ExceptionUtils.getStackTrace(e);
+					if(StringUtils.isNotBlank(errMsg)){
+						//最多保存1024个字符
+						consumeFailedMsgVO.setCunsumerErrMsg(errMsg.substring(0, 1024));
+					}
+				}
+				consumeFailedMsgVO.setMsg(new String(messageExt.getBody()));
 				consumeFailedMsgVO.setMsgId(messageExt.getMsgId());
+				consumeFailedMsgVO.setMsgKeys(messageExt.getKeys());
+				consumeFailedMsgVO.setReconsumeTimes(messageExt.getReconsumeTimes());
+				consumeFailedMsgVO.setTag(messageExt.getTags());
+				consumeFailedMsgVO.setTopic(messageExt.getTopic());
 				rocketMQTemplate.sendOneWay(destination, consumeFailedMsgVO);
 				log.info("发送消息消费失败MQ成功");
 			}catch(Exception e1){
@@ -261,7 +278,7 @@ public class DefaultRocketMQListenerContainer implements InitializingBean, Rocke
                     return objectMapper.readValue(str, messageType);
                 } catch (Exception e) {
                     log.info("convert failed. str:{}, msgType:{}", str, messageType);
-                    throw new RuntimeException("cannot convert message to " + messageType, e);
+                    throw new ConvertMsgException("cannot convert message to " + messageType, e);
                 }
             }
         }

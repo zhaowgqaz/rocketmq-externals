@@ -3,14 +3,18 @@ package org.apache.rocketmq.spring.starter.msgvo;
 import java.io.Serializable;
 import java.util.Date;
 
-import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
-import org.apache.rocketmq.common.message.MessageExt;
-
 public class ConsumeFailedMsgVO implements Serializable{
 
 	private static final long serialVersionUID = 1L;
+
 	/**消息ID*/
     private String msgId;
+
+    /**消息主题*/
+    private String topic;
+
+    /**消息标签描述*/
+    private String tag;
 
     /**消费组*/
     private String consumeGroup;
@@ -18,92 +22,128 @@ public class ConsumeFailedMsgVO implements Serializable{
     /**消费者ip*/
     private String consumeIp;
 
-    /**消费组接受消息时间*/
+    /**消费开始时间*/
     private Date consumeBeginTime;
-    
-    /**消费组处理完成时间*/
+
+    /**消费结束时间*/
     private Date consumeEndTime;
-    
-    /**消费处理时长（秒）*/
-    private Long executeTime;
-    
-    private ConsumeConcurrentlyStatus consumeConcurrentlyStatus;
+
+    /**消息关键字*/
+    private String msgKeys;
+
+    /**重复消费次数*/
+    private Integer reconsumeTimes;
     
     /**消费失败错误信息*/
-    private Throwable e;
+    private String cunsumerErrMsg;
 
-    /**消息*/
-    private MessageExt messageExt;
+    /**消息内容*/
+    private String msg;
 
-	public String getMsgId() {
-		return msgId;
+    public String getCunsumerErrMsg() {
+		return cunsumerErrMsg;
 	}
 
-	public void setMsgId(String msgId) {
-		this.msgId = msgId;
+	public void setCunsumerErrMsg(String cunsumerErrMsg) {
+		this.cunsumerErrMsg = cunsumerErrMsg;
 	}
 
-	public String getConsumeGroup() {
-		return consumeGroup;
+	public String getMsg() {
+		return msg;
 	}
 
-	public void setConsumeGroup(String consumeGroup) {
-		this.consumeGroup = consumeGroup;
+	public void setMsg(String msg) {
+		this.msg = msg;
 	}
 
-	public String getConsumeIp() {
-		return consumeIp;
-	}
+	/**获取消息ID*/
+    public String getMsgId() {
+        return msgId;
+    }
 
-	public void setConsumeIp(String consumeIp) {
-		this.consumeIp = consumeIp;
-	}
+    /**设置消息ID*/
+    public void setMsgId(String msgId) {
+        this.msgId = msgId == null ? null : msgId.trim();
+    }
 
-	public Date getConsumeBeginTime() {
-		return consumeBeginTime;
-	}
+    /**获取消息主题*/
+    public String getTopic() {
+        return topic;
+    }
 
-	public void setConsumeBeginTime(Date consumeBeginTime) {
-		this.consumeBeginTime = consumeBeginTime;
-	}
+    /**设置消息主题*/
+    public void setTopic(String topic) {
+        this.topic = topic == null ? null : topic.trim();
+    }
 
-	public Date getConsumeEndTime() {
-		return consumeEndTime;
-	}
+    /**获取消息标签描述*/
+    public String getTag() {
+        return tag;
+    }
 
-	public void setConsumeEndTime(Date consumeEndTime) {
-		this.consumeEndTime = consumeEndTime;
-	}
+    /**设置消息标签描述*/
+    public void setTag(String tag) {
+        this.tag = tag == null ? null : tag.trim();
+    }
 
-	public Long getExecuteTime() {
-		return executeTime;
-	}
+    /**获取消费组*/
+    public String getConsumeGroup() {
+        return consumeGroup;
+    }
 
-	public void setExecuteTime(Long executeTime) {
-		this.executeTime = executeTime;
-	}
+    /**设置消费组*/
+    public void setConsumeGroup(String consumeGroup) {
+        this.consumeGroup = consumeGroup == null ? null : consumeGroup.trim();
+    }
 
-	public ConsumeConcurrentlyStatus getConsumeConcurrentlyStatus() {
-		return consumeConcurrentlyStatus;
-	}
+    /**获取消费者ip*/
+    public String getConsumeIp() {
+        return consumeIp;
+    }
 
-	public void setConsumeConcurrentlyStatus(ConsumeConcurrentlyStatus consumeConcurrentlyStatus) {
-		this.consumeConcurrentlyStatus = consumeConcurrentlyStatus;
-	}
+    /**设置消费者ip*/
+    public void setConsumeIp(String consumeIp) {
+        this.consumeIp = consumeIp == null ? null : consumeIp.trim();
+    }
 
-	public Throwable getE() {
-		return e;
-	}
+    /**获取消费开始时间*/
+    public Date getConsumeBeginTime() {
+        return consumeBeginTime;
+    }
 
-	public void setE(Throwable e) {
-		this.e = e;
-	}
+    /**设置消费开始时间*/
+    public void setConsumeBeginTime(Date consumeBeginTime) {
+        this.consumeBeginTime = consumeBeginTime;
+    }
 
-	public MessageExt getMessageExt() {
-		return messageExt;
-	}
+    /**获取消费结束时间*/
+    public Date getConsumeEndTime() {
+        return consumeEndTime;
+    }
 
-	public void setMessageExt(MessageExt messageExt) {
-		this.messageExt = messageExt;
-	}
+    /**设置消费结束时间*/
+    public void setConsumeEndTime(Date consumeEndTime) {
+        this.consumeEndTime = consumeEndTime;
+    }
+
+    /**获取消息关键字*/
+    public String getMsgKeys() {
+        return msgKeys;
+    }
+
+    /**设置消息关键字*/
+    public void setMsgKeys(String msgKeys) {
+        this.msgKeys = msgKeys == null ? null : msgKeys.trim();
+    }
+
+    /**获取重复消费次数*/
+    public Integer getReconsumeTimes() {
+        return reconsumeTimes;
+    }
+
+    /**设置重复消费次数*/
+    public void setReconsumeTimes(Integer reconsumeTimes) {
+        this.reconsumeTimes = reconsumeTimes;
+    }
+
 }
