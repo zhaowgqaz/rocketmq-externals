@@ -122,7 +122,10 @@ public class RocketMQAutoConfiguration {
         private RocketMQProperties rocketMQProperties;
 
         private ObjectMapper objectMapper;
-
+        
+        @Autowired
+        private RocketMQTemplate rocketMQTemplate;
+        
         public ListenerContainerConfiguration() {
         }
 
@@ -166,6 +169,7 @@ public class RocketMQAutoConfiguration {
             beanBuilder.addPropertyValue(PROP_SELECTOR_EXPRESS, environment.resolvePlaceholders(annotation.selectorExpress()));
             beanBuilder.addPropertyValue(PROP_SELECTOR_TYPE, annotation.selectorType());
             beanBuilder.addPropertyValue(PROP_ROCKETMQ_LISTENER, rocketMQListener);
+            beanBuilder.addPropertyValue(PROP_ROCKETMQ_TEMPLATE, rocketMQTemplate);
             if (Objects.nonNull(objectMapper)) {
                 beanBuilder.addPropertyValue(PROP_OBJECT_MAPPER, objectMapper);
             }

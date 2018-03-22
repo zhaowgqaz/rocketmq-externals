@@ -20,9 +20,13 @@ package org.apache.rocketmq.spring.starter.core;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.rocketmq.spring.starter.enums.ConsumeMode;
 import org.apache.rocketmq.spring.starter.enums.SelectorType;
+import org.apache.rocketmq.spring.starter.msgvo.ConsumeFailedMsgVO;
+import org.apache.rocketmq.spring.starter.utils.IPUtil;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import lombok.Getter;
@@ -40,6 +44,7 @@ import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.util.Assert;
 
 @SuppressWarnings("WeakerAccess")
@@ -109,6 +114,9 @@ public class DefaultRocketMQListenerContainer implements InitializingBean, Rocke
 
     private Class messageType;
 
+    @Setter
+    private RocketMQTemplate rocketMQTemplate;
+    
     public void setupMessageListener(RocketMQListener rocketMQListener) {
         this.rocketMQListener = rocketMQListener;
     }
@@ -145,6 +153,7 @@ public class DefaultRocketMQListenerContainer implements InitializingBean, Rocke
         @SuppressWarnings("unchecked")
         public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs, ConsumeConcurrentlyContext context) {
             for (MessageExt messageExt : msgs) {
+            	Date consumeBeginTime = new Date();
                 log.debug("received msg: {}", messageExt);
                 try {
                     long now = System.currentTimeMillis();
@@ -154,12 +163,48 @@ public class DefaultRocketMQListenerContainer implements InitializingBean, Rocke
                 } catch (Exception e) {
                     log.warn("consume message failed. messageExt:{}", messageExt, e);
                     context.setDelayLevelWhenNextConsume(delayLevelWhenNextConsume);
+                    //消息消费失败，发送失败消息
+                    this.sendConsumeMsgFailed(messageExt,e,consumeBeginTime);
                     return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                 }
             }
 
             return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
         }
+        /**
+         * 发送消息消费失败消息
+         * @param messageExt
+         * @param e
+         * 2018年3月22日 zhaowg
+         */
+		private void sendConsumeMsgFailed(MessageExt messageExt, Exception e,Date consumeBeginTime) {
+			log.info("消费消息失败，开始发送消费失败MQ");
+			String topic = "DATA_COLLECTION_TOPIC";
+			String tag  = "ConsumeMsgFailed";
+			try{
+				if(messageExt.getTopic().equals(topic) && tag.equals(messageExt.getTags())){
+					log.info("消费失败的消息为ConsumeMsgFailed，不需要记录日志");
+					return;
+				}
+				String destination = topic+":"+tag;
+				ConsumeFailedMsgVO consumeFailedMsgVO = new ConsumeFailedMsgVO();
+				consumeFailedMsgVO.setConsumeBeginTime(consumeBeginTime);
+				Date consumeEndTime = new Date();
+				consumeFailedMsgVO.setConsumeEndTime(consumeEndTime);
+				consumeFailedMsgVO.setConsumeGroup(consumerGroup);
+				consumeFailedMsgVO.setConsumeIp(IPUtil.getLocalHost());
+				consumeFailedMsgVO.setConsumeConcurrentlyStatus(ConsumeConcurrentlyStatus.RECONSUME_LATER);
+				consumeFailedMsgVO.setE(e);
+				consumeFailedMsgVO.setExecuteTime((consumeEndTime.getTime()-consumeBeginTime.getTime())/1000);
+				consumeFailedMsgVO.setMessageExt(messageExt);
+				consumeFailedMsgVO.setMsgId(messageExt.getMsgId());
+				rocketMQTemplate.sendOneWay(destination, consumeFailedMsgVO);
+				log.info("发送消息消费失败MQ成功");
+			}catch(Exception e1){
+				log.info("发送消息消费失败MQ异常",e);
+			}
+			
+		}
     }
 
     public class DefaultMessageListenerOrderly implements MessageListenerOrderly {

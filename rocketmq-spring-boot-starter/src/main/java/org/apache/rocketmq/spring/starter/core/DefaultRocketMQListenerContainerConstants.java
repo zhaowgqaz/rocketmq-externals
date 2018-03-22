@@ -32,4 +32,6 @@ public final class DefaultRocketMQListenerContainerConstants {
     public static final String PROP_ROCKETMQ_LISTENER = "rocketMQListener";
     public static final String PROP_OBJECT_MAPPER = "objectMapper";
     public static final String METHOD_DESTROY = "destroy";
+    /**生产者 add zwg*/
+    public static final String PROP_ROCKETMQ_TEMPLATE = "rocketMQTemplate"; 
 }
