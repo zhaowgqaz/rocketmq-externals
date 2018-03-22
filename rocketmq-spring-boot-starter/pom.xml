@@ -22,7 +22,7 @@
 
     <groupId>org.apache.rocketmq</groupId>
     <artifactId>spring-boot-starter-rocketmq</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.1-SNAPSHOT</version>
 
     <name>Spring Boot Rocket Starter</name>
     <description>Starter for messaging using Apache RocketMQ</description>
@@ -109,7 +109,18 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
+	<distributionManagement>
+	        <repository>
+	            <id>nexus_releases</id>
+	            <name>core Release Repository</name>
+	            <url>http://192.168.1.195:9999/nexus/content/repositories/releases/</url>
+	        </repository>
+	        <snapshotRepository>
+	            <id>nexus_snapshots</id>
+	            <name>core Snapshots Repository</name>
+	            <url>http://192.168.1.195:9999/nexus/content/repositories/snapshots/</url>
+	        </snapshotRepository>
+	    </distributionManagement>
     <build>
         <plugins>
             <plugin>
